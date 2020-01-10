@@ -2,7 +2,9 @@
   "name": "my-own-angularjs",
   "version": "0.1.0",
   "devDependencies": {
-    "jshint": "^2.11.0-rc1"
+    "jasmine-core": "^3.5.0",
+    "jshint": "^2.11.0-rc1",
+    "sinon": "^8.0.4"
   },
   "scripts": {
     "lint": "jshint src"
