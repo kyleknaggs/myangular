@@ -200,7 +200,7 @@ describe('Scope', function(){
       scope.$watch(
         function(scope) { return scope.aValue; },
         function(newValue, oldValue, scope) {
-        scope.counter++;
+          scope.counter++;
         },
         true
       );

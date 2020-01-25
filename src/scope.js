@@ -20,6 +20,18 @@ Scope.prototype.$watch = function(watchFn, listenerFn, valueEq) {
   this.$$lastDirtyWatch = null;
 };
 
+Scope.prototype.$digest = function() {
+  var ttl = 10;
+  var dirty;
+  this.$$lastDirtyWatch = null;
+  do {
+    dirty = this.$$digestOnce();
+    if (dirty && !(ttl--)) {
+      throw '10 digest iterations reached';
+    }
+  } while (dirty);
+};
+
 Scope.prototype.$$digestOnce = function() {
   var self = this;
   var newValue, oldValue, dirty;
@@ -38,18 +50,6 @@ Scope.prototype.$$digestOnce = function() {
     }
   });
   return dirty;
-};
-
-Scope.prototype.$digest = function() {
-  var ttl = 10;
-  var dirty;
-  this.$$lastDirtyWatch = null;
-  do {
-    dirty = this.$$digestOnce();
-    if (dirty && !(ttl--)) {
-      throw '10 digest iterations reached';
-    }
-  } while (dirty);
 };
 
 Scope.prototype.$$areEqual = function(newValue, oldValue, valueEq) {
