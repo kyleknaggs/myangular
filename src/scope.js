@@ -31,7 +31,15 @@ Scope.prototype.$watch = function(watchFn, listenerFn, valueEq) {
 };
 
 Scope.prototype.$evalAsync = function(expr) {
-  this.$$asyncQueue.push({scope: this, expression: expr});
+  var self = this;
+  if (!self.$$phase && !self.$$asyncQueue.length) {
+    setTimeout(function() {
+    if (self.$$asyncQueue.length) {
+      self.$digest();
+      }
+    }, 0);
+  }
+  self.$$asyncQueue.push({scope: this, expression: expr});
 };
 
 Scope.prototype.$beginPhase = function (phase){
