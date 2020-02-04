@@ -8,6 +8,7 @@ function Scope() {
 	this.$$watchers = [];
   this.$$lastDirtyWatch = null;
   this.$$asyncQueue = [];
+  this.$$applyAsyncQueue = [];
   this.$$phase = null;
 }
 
@@ -34,8 +35,8 @@ Scope.prototype.$evalAsync = function(expr) {
   var self = this;
   if (!self.$$phase && !self.$$asyncQueue.length) {
     setTimeout(function() {
-    if (self.$$asyncQueue.length) {
-      self.$digest();
+      if (self.$$asyncQueue.length) {
+        self.$digest();
       }
     }, 0);
   }
@@ -118,6 +119,20 @@ Scope.prototype.$apply = function(expr) {
     this.$clearPhase();
     this.$digest();
   }
+};
+
+Scope.prototype.$applyAsync = function(expr) {
+  var self = this;
+  self.$$applyAsyncQueue.push(function() {
+    self.$eval(expr);
+  });
+  setTimeout(function() {
+    self.$apply(function() {
+      while (self.$$applyAsyncQueue.length) {
+        self.$$applyAsyncQueue.shift()();
+      }
+    });
+  }, 0);
 };
 
 module.exports = Scope;
