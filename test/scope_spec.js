@@ -882,9 +882,9 @@ describe('Scope', function() {
       var destroyGroup = scope.$watchGroup([
         function(scope) { return scope.aValue; },
         function(scope) { return scope.anotherValue; }
-        ], function(newValues, oldValues, scope) {
-          counter++;
-        });
+      ], function(newValues, oldValues, scope) {
+        counter++;
+      });
       scope.$digest();
 
       scope.anotherValue = 3;
@@ -892,6 +892,18 @@ describe('Scope', function() {
       scope.$digest();
 
       expect(counter).toEqual(1);
+    });
+
+    it('does not call the zero-watch listener when deregistered first', function() {
+      var counter = 0;
+
+      var destroyGroup = scope.$watchGroup([], function(newValues, oldValues, scope) {
+        counter++;
+      });
+      destroyGroup();
+      scope.$digest();
+
+      expect(counter).toEqual(0);
     });
 
   });
