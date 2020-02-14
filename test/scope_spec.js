@@ -372,7 +372,30 @@ describe('Scope', function() {
       expect(scope.counter).toBe(0);
     });
 
+    it('has a $$phase field whose value is the current digest phase', function() {
+      scope.aValue = [1, 2, 3];
+      scope.phaseInWatchFunction = undefined;
+      scope.phaseInListenerFunction = undefined;
+      scope.phaseInApplyFunction = undefined;
 
+      scope.$watch(
+        function(scope) {
+          scope.phaseInWatchFunction = scope.$$phase;
+          return scope.aValue;
+        },
+        function(newValue, oldValue, scope) {
+          scope.phaseInListenerFunction = scope.$$phase;
+        }
+      );
+
+      scope.$apply(function(scope) {
+        scope.phaseInApplyFunction = scope.$$phase;
+      });
+
+      expect(scope.phaseInWatchFunction).toBe('$digest');
+      expect(scope.phaseInListenerFunction).toBe('$digest');
+      expect(scope.phaseInApplyFunction).toBe('$apply');
+    });
 
   });
 
@@ -508,7 +531,7 @@ describe('Scope', function() {
       expect(scope.asyncEvaluatedTimes).toBe(2);
     });
 
-    it('eventually halts $evalAsyncs added by watches', function() {
+   it('eventually halts $evalAsyncs added by watches', function() {
       scope.aValue = [1, 2, 3];
 
       scope.$watch(
@@ -522,31 +545,6 @@ describe('Scope', function() {
       expect(function() { scope.$digest(); }).toThrow();
     });
 
-    it('has a $$phase field whose value is the current digest phase', function() {
-      scope.aValue = [1, 2, 3];
-      scope.phaseInWatchFunction = undefined;
-      scope.phaseInListenerFunction = undefined;
-      scope.phaseInApplyFunction = undefined;
-
-      scope.$watch(
-        function(scope) {
-          scope.phaseInWatchFunction = scope.$$phase;
-          return scope.aValue;
-        },
-        function(newValue, oldValue, scope) {
-          scope.phaseInListenerFunction = scope.$$phase;
-        }
-      );
-
-      scope.$apply(function(scope) {
-        scope.phaseInApplyFunction = scope.$$phase;
-      });
-
-      expect(scope.phaseInWatchFunction).toBe('$digest');
-      expect(scope.phaseInListenerFunction).toBe('$digest');
-      expect(scope.phaseInApplyFunction).toBe('$apply');
-    });
-
     it('schedules a digest in $evalAsync', function(done) {
       scope.aValue = 'abc';
       scope.counter = 0;
@@ -558,10 +556,9 @@ describe('Scope', function() {
         }
       );
 
-      scope.$evalAsync(function(scope) {
-      });
-
+      scope.$evalAsync(function(scope) { });
       expect(scope.counter).toBe(0);
+
       setTimeout(function() {
         expect(scope.counter).toBe(1);
         done();
@@ -587,7 +584,6 @@ describe('Scope', function() {
         expect(scope.counter).toBe(1);
         done();
       }, 50);
-
     });
 
   });
@@ -627,6 +623,7 @@ describe('Scope', function() {
     it('never executes $applyAsynced function in the same cycle', function(done) {
       scope.aValue = [1, 2, 3];
       scope.asyncApplied = false;
+      scope.asyncAppliedImmediately = false;
 
       scope.$watch(
         function(scope) { return scope.aValue; },
@@ -669,7 +666,7 @@ describe('Scope', function() {
       }, 50);
     });
 
-    it('cancels and flushes $applyAsync if digested first', function(done) {
+    it('cancels $applyAsync if digested first', function(done) {
       scope.counter = 0;
 
       scope.$watch(
@@ -746,9 +743,7 @@ describe('Scope', function() {
         scope.aValue = 'changed value';
       });
       scope.$watch(
-        function(scope) {
-          return scope.aValue;
-        },
+        function(scope) { return scope.aValue; },
         function(newValue, oldValue, scope) {
           scope.watchedValue = newValue;
         }
@@ -772,6 +767,7 @@ describe('Scope', function() {
       });
 
       scope.$digest();
+
       expect(didRun).toBe(true);
     });
 
@@ -784,7 +780,7 @@ describe('Scope', function() {
       scope = new Scope();
     });
 
-    it('takes watches as an array and calls listener with arrays', function() {
+    it('takes several watches as an array and calls listener with arrays', function() {
       var gotNewValues, gotOldValues;
 
       scope.aValue = 1;
@@ -792,10 +788,10 @@ describe('Scope', function() {
 
       scope.$watchGroup([
         function(scope) { return scope.aValue; },
-        function(scope) { return scope.anotherValue; }
-        ], function(newValues, oldValues, scope) {
-          gotNewValues = newValues;
-          gotOldValues = oldValues;
+        function(scope) { return scope.anotherValue; }
+      ], function(newValues, oldValues, scope) {
+        gotNewValues = newValues;
+        gotOldValues = oldValues;
       });
       scope.$digest();
 
@@ -881,7 +877,7 @@ describe('Scope', function() {
 
       var destroyGroup = scope.$watchGroup([
         function(scope) { return scope.aValue; },
-        function(scope) { return scope.anotherValue; }
+        function(scope) { return scope.anotherValue; }
       ], function(newValues, oldValues, scope) {
         counter++;
       });
@@ -893,6 +889,7 @@ describe('Scope', function() {
 
       expect(counter).toEqual(1);
     });
+
 
     it('does not call the zero-watch listener when deregistered first', function() {
       var counter = 0;

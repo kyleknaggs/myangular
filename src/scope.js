@@ -14,6 +14,18 @@ function Scope() {
   this.$$phase = null;
 }
 
+
+Scope.prototype.$beginPhase = function(phase) {
+  if (this.$$phase) {
+    throw this.$$phase + ' already in progress.';
+  }
+  this.$$phase = phase;
+};
+
+Scope.prototype.$clearPhase = function() {
+  this.$$phase = null;
+};
+
 Scope.prototype.$watch = function(watchFn, listenerFn, valueEq) {
 	var self = this;
   var watcher = {
@@ -33,28 +45,53 @@ Scope.prototype.$watch = function(watchFn, listenerFn, valueEq) {
   };
 };
 
-Scope.prototype.$evalAsync = function(expr) {
+Scope.prototype.$watchGroup = function(watchFns, listenerFn) {
   var self = this;
-  if (!self.$$phase && !self.$$asyncQueue.length) {
-    setTimeout(function() {
-      if (self.$$asyncQueue.length) {
-        self.$digest();
+  var oldValues = new Array(watchFns.length);
+  var newValues = new Array(watchFns.length);
+  var changeReactionScheduled = false;
+  var firstRun = true;
+
+  if (watchFns.length === 0) {
+    var shouldCall = true;
+    self.$evalAsync(function() {
+      if (shouldCall) {
+        listenerFn(newValues, newValues, self);
       }
-    }, 0);
+    });
+    return function() {
+      shouldCall = false;
+    };
   }
-  self.$$asyncQueue.push({scope: this, expression: expr});
+
+  function watchGroupListener() {
+    if (firstRun) {
+      firstRun = false;
+      listenerFn(newValues, newValues, self);
+    } else {
+      listenerFn(newValues, oldValues, self);
+    }
+    changeReactionScheduled = false;
+  }
+
+  var destroyFunctions = _.map(watchFns, function(watchFn, i) {
+    return self.$watch(watchFn, function(newValue, oldValue) {
+      newValues[i] = newValue;
+      oldValues[i] = oldValue;
+      if (!changeReactionScheduled) {
+        changeReactionScheduled = true;
+        self.$evalAsync(watchGroupListener);
+      }
+    });
+  });
+
+  return function() {
+    _.forEach(destroyFunctions, function(destroyFunction) {
+      destroyFunction();
+    });
+  };
 };
 
-Scope.prototype.$beginPhase = function (phase){
-  if (this.$$phase){
-    throw this.$$phase + ' already in progress.';
-  }
-  this.$$phase = phase;
-};
-
-Scope.prototype.$clearPhase = function() {
-  this.$$phase = null;
-};
 
 Scope.prototype.$digest = function() {
   var ttl = 10;
@@ -78,7 +115,6 @@ Scope.prototype.$digest = function() {
     }
     dirty = this.$$digestOnce();
     if ((dirty || this.$$asyncQueue.length) && !(ttl--)) {
-      this.$clearPhase();
       throw '10 digest iterations reached';
     }
   } while (dirty || this.$$asyncQueue.length);
@@ -98,7 +134,7 @@ Scope.prototype.$$digestOnce = function() {
   var newValue, oldValue, dirty;
   _.forEachRight(this.$$watchers, function(watcher) {
 		try {
-			if (watcher) {
+			if (watcher) {
 		    newValue = watcher.watchFn(self);
 		    oldValue = watcher.last;
 		    if (!self.$$areEqual(newValue, oldValue, watcher.valueEq)) {
@@ -127,7 +163,7 @@ Scope.prototype.$$areEqual = function(newValue, oldValue, valueEq) {
   }
 };
 
-Scope.prototype.$eval = function(expr, locals){
+Scope.prototype.$eval = function(expr, locals) {
   return expr(this, locals);
 };
 
@@ -139,6 +175,18 @@ Scope.prototype.$apply = function(expr) {
     this.$clearPhase();
     this.$digest();
   }
+};
+
+Scope.prototype.$evalAsync = function(expr) {
+  var self = this;
+  if (!self.$$phase && !self.$$asyncQueue.length) {
+    setTimeout(function() {
+      if (self.$$asyncQueue.length) {
+        self.$digest();
+      }
+    }, 0);
+  }
+  this.$$asyncQueue.push({scope: this, expression: expr});
 };
 
 Scope.prototype.$applyAsync = function(expr) {
@@ -166,54 +214,6 @@ Scope.prototype.$$flushApplyAsync = function() {
 
 Scope.prototype.$$postDigest = function(fn) {
   this.$$postDigestQueue.push(fn);
-};
-
-Scope.prototype.$watchGroup = function(watchFns, listenerFn) {
-  var self = this;
-  var oldValues = new Array(watchFns.length);
-  var newValues = new Array(watchFns.length);
-  var changeReactionScheduled = false;
-  var firstRun = true;
-
-  if (watchFns.length === 0) {
-    var shouldCall = true;
-    self.$evalAsync(function() {
-      if (shouldCall) {
-        listenerFn(newValues, newValues, self);
-      }
-    });
-    return function() {
-      shouldCall = false;
-    };
-  }
-
-  function watchGroupListener() {
-    if(firstRun){
-      firstRun = false;
-      listenerFn(newValues, newValues, self);
-    }else{
-      listenerFn(newValues, oldValues, self);
-    }
-    changeReactionScheduled = false;
-  }
-
-  var destroyFunctions = _.map(watchFns, function(watchFn, i){
-    return self.$watch(watchFn, function(newValue, oldValue) {
-      newValues[i] = newValue;
-      oldValues[i] = oldValue;
-      if (!changeReactionScheduled) {
-        changeReactionScheduled = true;
-        self.$evalAsync(watchGroupListener);
-      }
-    });
-  });
-
-  return function() {
-    _.forEach(destroyFunctions, function(destroyFunction) {
-      destroyFunction();
-    });
-  };
-
 };
 
 module.exports = Scope;
