@@ -9,7 +9,8 @@ function isArrayLike(obj) {
     return false;
   }
   var length = obj.length;
-  return _.isNumber(length);
+  return length === 0 ||
+    (_.isNumber(length) && length > 0 && (length - 1) in obj);
 }
 
 function Scope() {
@@ -321,7 +322,7 @@ Scope.prototype.$watchCollection = function(watchFn, listenerFn) {
             oldValue[key] = newVal;
           }
         });
-        if(oldLength > newLength){
+        if (oldLength > newLength) {
           changeCount++;
           _.forOwn(oldValue, function(oldVal, key) {
             if (!newValue.hasOwnProperty(key)) {
