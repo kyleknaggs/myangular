@@ -1474,7 +1474,6 @@ describe('Scope', function() {
     it('notices an item replaced in a NodeList object', function() {
       document.documentElement.appendChild(document.createElement('div'));
       scope.arrayLike = document.getElementsByTagName('div');
-
       scope.counter = 0;
 
       scope.$watchCollection(
@@ -1515,7 +1514,6 @@ describe('Scope', function() {
       scope.$digest();
       expect(scope.counter).toBe(2);
     });
-
 
     it('notices when an attribute is added to an object', function() {
       scope.counter = 0;
@@ -1689,6 +1687,7 @@ describe('Scope', function() {
       
       expect(oldValueGiven).toEqual({a: 1, b: 2});
     });
+
 
   });
 
